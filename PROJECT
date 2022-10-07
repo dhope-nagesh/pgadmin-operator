@@ -1,0 +1,16 @@
+domain: dhope-nagesh.io
+layout:
+- go.kubebuilder.io/v3
+projectName: pgadmin-operator
+repo: github.com/dhope-nagesh/pgadmin-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: dhope-nagesh.io
+  group: pgadmin
+  kind: Pgadmin
+  path: github.com/dhope-nagesh/pgadmin-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"

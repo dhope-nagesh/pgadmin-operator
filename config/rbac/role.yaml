@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - pgadmin.dhope-nagesh.io
+  resources:
+  - pgadmins
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pgadmin.dhope-nagesh.io
+  resources:
+  - pgadmins/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - pgadmin.dhope-nagesh.io
+  resources:
+  - pgadmins/status
+  verbs:
+  - get
+  - patch
+  - update
