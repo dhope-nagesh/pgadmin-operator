@@ -45,6 +45,8 @@ type PgadminStatus struct {
 //+kubebuilder:subresource:status
 
 // Pgadmin is the Schema for the pgadmins API
+// +kubebuilder:printcolumn:name="Replicas",type=integer,JSONPath=`.spec.replicas`
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type Pgadmin struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
