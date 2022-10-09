@@ -9,4 +9,4 @@ metadata:
     app.kubernetes.io/created-by: pgadmin-operator
   name: pgadmin-sample
 spec:
-  # TODO(user): Add fields here
+  replicas: 1

@@ -28,8 +28,7 @@ type PgadminSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Pgadmin. Edit pgadmin_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Replicas int32 `json:"replicas"`
 }
 
 // PgadminStatus defines the observed state of Pgadmin

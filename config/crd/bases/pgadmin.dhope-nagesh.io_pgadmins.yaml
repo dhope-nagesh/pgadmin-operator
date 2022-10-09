@@ -35,10 +35,11 @@ spec:
           spec:
             description: PgadminSpec defines the desired state of Pgadmin
             properties:
-              foo:
-                description: Foo is an example field of Pgadmin. Edit pgadmin_types.go
-                  to remove/update
-                type: string
+              replicas:
+                format: int32
+                type: integer
+            required:
+            - replicas
             type: object
           status:
             description: PgadminStatus defines the observed state of Pgadmin
