@@ -18,6 +18,8 @@ package controllers
 
 import (
 	"context"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
@@ -81,6 +83,18 @@ var _ = BeforeSuite(func() {
 		Scheme: scheme.Scheme,
 	})
 	Expect(err).ToNot(HaveOccurred())
+
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-creds",
+			Namespace: "default",
+		},
+		Data: map[string][]byte{
+			"PGADMIN_DEFAULT_EMAIL":    []byte("ZGhvcGUubmFnZXNoQGdtYWlsLmNvbQ=="),
+			"PGADMIN_DEFAULT_PASSWORD": []byte("YWRtaW5AMTIz"),
+		},
+	}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
 
 	err = (&PgadminReconciler{
 		Client: k8sManager.GetClient(),
