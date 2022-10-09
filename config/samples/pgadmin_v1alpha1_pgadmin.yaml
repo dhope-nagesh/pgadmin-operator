@@ -10,3 +10,4 @@ metadata:
   name: pgadmin-sample
 spec:
   replicas: 1
+  credsSecretName: pgadmin-creds

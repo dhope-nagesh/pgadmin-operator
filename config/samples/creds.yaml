@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgadmin-creds
+data:
+  PGADMIN_DEFAULT_EMAIL: ZGhvcGUubmFnZXNoQGdtYWlsLmNvbQ==
+  PGADMIN_DEFAULT_PASSWORD: YWRtaW5AMTIz

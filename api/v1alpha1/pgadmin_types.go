@@ -28,7 +28,11 @@ type PgadminSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	//+kubebuilder:default:=1
+	//+kubebuilder:validation:Minimum:=1
 	Replicas int32 `json:"replicas"`
+	//+kubebuilder:validation:Required
+	CredsSecretName string `json:"credsSecretName"`
 }
 
 // PgadminStatus defines the observed state of Pgadmin

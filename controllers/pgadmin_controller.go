@@ -68,6 +68,10 @@ func (r *PgadminReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	if err := r.ValidateCredsSecret(ctx, Pgadmin); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if Pgadmin.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !containsString(Pgadmin.GetFinalizers(), PgAdminFinalizer) {
 			controllerutil.AddFinalizer(Pgadmin, PgAdminFinalizer)
@@ -94,6 +98,7 @@ func (r *PgadminReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, nil
 	}
+
 	if err := r.CreateUpdateDeployment(ctx, Pgadmin); err != nil {
 		return ctrl.Result{}, nil
 	}
@@ -115,6 +120,17 @@ func (r *PgadminReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func Int32ToPtr(i int32) *int32 {
 	return &i
+}
+
+func (r *PgadminReconciler) ValidateCredsSecret(ctx context.Context, Pgadmin *pgadminv1alpha1.Pgadmin) error {
+	secret := &v1.Secret{}
+	if err := r.Client.Get(ctx, client.ObjectKey{
+		Name:      Pgadmin.Spec.CredsSecretName,
+		Namespace: Pgadmin.Namespace,
+	}, secret); err != nil {
+		return err
+	}
+	return nil
 }
 
 // CreateUpdateDeployment creates or update pgadmin deployment
@@ -152,14 +168,13 @@ func (r *PgadminReconciler) CreateUpdateDeployment(ctx context.Context, Pgadmin 
 									Protocol:      "TCP",
 								},
 							},
-							Env: []v1.EnvVar{
+							EnvFrom: []v1.EnvFromSource{
 								{
-									Name:  "PGADMIN_DEFAULT_EMAIL",
-									Value: "dhope.nagesh@gmail.com",
-								},
-								{
-									Name:  "PGADMIN_DEFAULT_PASSWORD",
-									Value: "admin@1234",
+									SecretRef: &v1.SecretEnvSource{
+										LocalObjectReference: v1.LocalObjectReference{
+											Name: Pgadmin.Spec.CredsSecretName,
+										},
+									},
 								},
 							},
 						},

@@ -35,10 +35,15 @@ spec:
           spec:
             description: PgadminSpec defines the desired state of Pgadmin
             properties:
+              credsSecretName:
+                type: string
               replicas:
+                default: 1
                 format: int32
+                minimum: 1
                 type: integer
             required:
+            - credsSecretName
             - replicas
             type: object
           status:
