@@ -9,5 +9,5 @@ metadata:
     app.kubernetes.io/created-by: pgadmin-operator
   name: pgadmin-sample
 spec:
-  replicas: 1
+  replicas: 10
   credsSecretName: pgadmin-creds
