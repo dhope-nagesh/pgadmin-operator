@@ -25,6 +25,7 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -68,11 +69,11 @@ func (r *PgadminReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if err := r.ValidateCredsSecret(ctx, Pgadmin); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	if Pgadmin.ObjectMeta.DeletionTimestamp.IsZero() {
+		if err := r.ValidateCredsSecret(ctx, Pgadmin); err != nil {
+			return ctrl.Result{}, err
+		}
+
 		if !containsString(Pgadmin.GetFinalizers(), PgAdminFinalizer) {
 			controllerutil.AddFinalizer(Pgadmin, PgAdminFinalizer)
 			if err := r.Update(ctx, Pgadmin); err != nil {
@@ -90,6 +91,10 @@ func (r *PgadminReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, err
 			}
 
+			if err := r.DeleteService(ctx, Pgadmin); err != nil {
+				return ctrl.Result{}, err
+			}
+
 			controllerutil.RemoveFinalizer(Pgadmin, PgAdminFinalizer)
 			if err := r.Update(ctx, Pgadmin); err != nil {
 				r.Logger.Info("Cleaned up, ready to delete now...")
@@ -100,6 +105,10 @@ func (r *PgadminReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if err := r.CreateUpdateDeployment(ctx, Pgadmin); err != nil {
+		return ctrl.Result{}, nil
+	}
+
+	if err := r.CreateUpdateService(ctx, Pgadmin); err != nil {
 		return ctrl.Result{}, nil
 	}
 
@@ -139,22 +148,16 @@ func (r *PgadminReconciler) CreateUpdateDeployment(ctx context.Context, Pgadmin 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "deployment-" + Pgadmin.Name,
 			Namespace: Pgadmin.Namespace,
-			Labels: map[string]string{
-				"app": "pgadmin",
-			},
+			Labels:    r.GetPgadminLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: Int32ToPtr(Pgadmin.Spec.Replicas),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "pgadmin",
-				},
+				MatchLabels: r.GetPgadminLabels(),
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "pgadmin",
-					},
+					Labels: r.GetPgadminLabels(),
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
@@ -195,6 +198,37 @@ func (r *PgadminReconciler) CreateUpdateDeployment(ctx context.Context, Pgadmin 
 	return nil
 }
 
+// CreateUpdateService creates or update pgadmin service
+func (r *PgadminReconciler) CreateUpdateService(ctx context.Context, Pgadmin *pgadminv1alpha1.Pgadmin) error {
+	service := v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-" + Pgadmin.Name,
+			Namespace: Pgadmin.Namespace,
+		},
+		Spec: v1.ServiceSpec{
+			Selector: r.GetPgadminLabels(),
+			Ports: []v1.ServicePort{
+				{
+					Name:       "http",
+					Protocol:   "TCP",
+					TargetPort: intstr.IntOrString{IntVal: 80},
+					Port:       4444,
+				},
+			},
+		},
+	}
+	if err := r.Create(ctx, &service); err != nil {
+		if apierrs.IsAlreadyExists(err) {
+			if err := r.Update(ctx, &service); err != nil {
+				return err
+			}
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
 // DeleteDeployment cleanups pgadmin deployment
 func (r *PgadminReconciler) DeleteDeployment(ctx context.Context, Pgadmin *pgadminv1alpha1.Pgadmin) error {
 	obj := appsv1.Deployment{}
@@ -214,6 +248,34 @@ func (r *PgadminReconciler) DeleteDeployment(ctx context.Context, Pgadmin *pgadm
 		return err
 	}
 	return nil
+}
+
+// DeleteService cleanups pgadmin service
+func (r *PgadminReconciler) DeleteService(ctx context.Context, Pgadmin *pgadminv1alpha1.Pgadmin) error {
+	obj := v1.Service{}
+	r.Logger.Info("Cleaning up service" + "service-" + Pgadmin.Name)
+
+	if err := r.Client.Get(ctx, client.ObjectKey{Namespace: Pgadmin.Namespace, Name: "service-" + Pgadmin.Name}, &obj); err != nil {
+		if apierrs.IsNotFound(err) {
+			r.Logger.Info("service " + "service-" + Pgadmin.Name + "not found")
+			return nil
+		}
+		r.Logger.Error(err, "Failed to get pgadmin service")
+		return err
+	}
+
+	if err := r.Client.Delete(ctx, &obj); err != nil {
+		r.Logger.Error(err, "Failed to delete pgadmin service")
+		return err
+	}
+	return nil
+}
+
+// GetPgadminLabels return labels for pgadmin deployment
+func (r *PgadminReconciler) GetPgadminLabels() map[string]string {
+	return map[string]string{
+		"app": "pgadmin",
+	}
 }
 
 // Helper functions to check and remove string from a slice of strings.
